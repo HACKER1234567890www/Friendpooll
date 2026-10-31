@@ -1163,7 +1163,7 @@ export default function App() {
   };
 
   // Administrator Rotation & Permission Handover
-  const handleRotateAdmin = async (nextAdminId: string, note?: string) => {
+  const handleRotateAdmin = async (nextAdminId: string, note?: string): Promise<boolean> => {
     const client = supabase;
     if (isRealMode && client && activeClubId) {
       try {
@@ -1175,25 +1175,25 @@ export default function App() {
 
         if (error) {
           setAuthNotice({ type: 'error', message: `Rotation failed: ${error.message}` });
-          return;
+          return false;
         }
 
         setAuthNotice({
           type: 'success',
           message: 'Administrator baton rotated successfully in the database!',
         });
-        loadCloudClubData(activeClubId);
-        return;
+        await loadCloudClubData(activeClubId);
+        return true;
       } catch (err: any) {
         setAuthNotice({ type: 'error', message: err.message || 'Failed to rotate administrator.' });
-        return;
+        return false;
       }
     }
 
     // Demo Mode fallback
     const oldAdmin = demoMembers.find((m) => m.id === demoRotation.currentAdminId) || currentAdmin;
     const newAdmin = demoMembers.find((m) => m.id === nextAdminId);
-    if (!newAdmin || !oldAdmin) return;
+    if (!newAdmin || !oldAdmin) return false;
 
     setDemoMembers((prev) =>
       prev.map((m) => {
@@ -1236,6 +1236,7 @@ export default function App() {
       hash: generateAuditHash(),
     };
     setDemoAuditLogs((prev) => [auditItem, ...prev]);
+    return true;
   };
 
   // Add Member in Demo Mode
