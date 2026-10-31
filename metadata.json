@@ -1,0 +1,6 @@
+{
+  "name": "Friendpool",
+  "description": "Collaborative social investment club PWA featuring democratic voting, rotating administrator leadership, ₹100–₹500 contribution ledgers, and audit history.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

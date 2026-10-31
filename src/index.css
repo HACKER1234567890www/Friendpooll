@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #041810;
+    color: #e2e8f0;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Custom dark forest scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #041810;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #0f3d2a;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #145339;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(10, 36, 26, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 240, 144, 0.12);
+}
+
+.glass-panel-subtle {
+  background: rgba(6, 28, 20, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glow-mint {
+  box-shadow: 0 0 25px -4px rgba(0, 240, 144, 0.28);
+}
+
+.glow-mint-sm {
+  box-shadow: 0 0 12px -2px rgba(0, 240, 144, 0.25);
+}

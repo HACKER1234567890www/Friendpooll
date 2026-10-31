@@ -1,0 +1,6 @@
+{
+  "summary":  "Definitive v7 Supabase integration plan for Friendpool addressing all 6 user requirements: proposal schema strictly limited to verified columns (with optional migration rationale for extended fields), comprehensive inventory and replacement strategy for existing database RLS policies accounting for PostgreSQL's permissive-OR rule, removal of the arbitrary membership-probing function in favor of an internal peer-scoped subquery, strict club row-locking during admin rotation, definitive diagnostic query for contributions_member_id_fkey with INSERT policy left pending, hardened SECURITY DEFINER functions, exact stage-by-stage rollback scripts, and a list of unresolved questions.",
+  "updatedAt":  "2026-10-30T15:04:28.882346328Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}
