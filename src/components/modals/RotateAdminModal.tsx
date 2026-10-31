@@ -27,7 +27,7 @@ export const RotateAdminModal: React.FC<RotateAdminModalProps> = ({
     ? rotation.rotationQueue[(currentQueueIndex + 1 + rotation.rotationQueue.length) % rotation.rotationQueue.length]
     : undefined;
   const defaultNextId = eligibleNextMembers.some((m) => m.id === queuedNextId)
-    ? queuedNextId
+    ? (queuedNextId || '')
     : eligibleNextMembers[0]?.id || '';
 
   const [selectedNextId, setSelectedNextId] = useState<string>(defaultNextId);
