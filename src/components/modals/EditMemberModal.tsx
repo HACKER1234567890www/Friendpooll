@@ -6,7 +6,7 @@ interface EditMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
   member: Member | null;
-  onSaveMember: (updatedMember: Member) => void;
+  onSaveMember: (updatedMember: Member) => Promise<boolean>;
 }
 
 const COLOR_OPTIONS = [
@@ -43,7 +43,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
 
   if (!isOpen || !member) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       setError('Member name is required.');
@@ -58,7 +58,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
       .toUpperCase()
       .slice(0, 2) || 'MB';
 
-    onSaveMember({
+    const saved = await onSaveMember({
       ...member,
       name: name.trim(),
       email: email.trim(),
@@ -66,6 +66,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
       avatar: initials,
       color,
     });
+    if (!saved) return;
     onClose();
   };
 
