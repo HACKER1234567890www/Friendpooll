@@ -270,7 +270,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
           <div>
             <h2 className="text-lg font-bold text-white">Supabase Authentication</h2>
-            <p className="text-xs text-white/60">Connect to your private investment club</p>
+            <p className="text-xs text-white/60">Connect to your private club simulation</p>
           </div>
         </div>
 
