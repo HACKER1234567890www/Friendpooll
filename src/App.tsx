@@ -381,7 +381,7 @@ export default function App() {
 
       if (error || errorDescription) {
         const decodedMsg = errorDescription
-          ? decodeURIComponent(errorDescription.replace(/\\+/g, ' '))
+          ? decodeURIComponent(errorDescription.replace(/\+/g, ' '))
           : 'Email verification link was invalid or has expired.';
         setAuthNotice({
           type: 'error',
