@@ -721,7 +721,7 @@ export default function App() {
     amount: number;
     note: string;
     method: 'Simulated UPI' | 'Simulated IMPS' | 'Club Quick-Deposit';
-  }) => {
+  }): Promise<boolean> => {
     const refNum = Math.floor(1000 + Math.random() * 9000);
     const referenceCode = `FP-SIM-${refNum}`;
     const amountPaise = amount * 100;
@@ -742,12 +742,12 @@ export default function App() {
 
         if (insertErr) throw insertErr;
 
-        loadCloudClubData(activeClubId);
-        return;
+        await loadCloudClubData(activeClubId);
+        return true;
       } catch (err: any) {
         console.error('Cloud contribution error:', err);
         setAuthNotice({ type: 'error', message: `Deposit submission failed: ${err.message}` });
-        return;
+        return false;
       }
     }
 
@@ -778,6 +778,7 @@ export default function App() {
       hash: generateAuditHash(),
     };
     setDemoAuditLogs((prev) => [auditItem, ...prev]);
+    return true;
   };
 
   const handleSimulateQuickDeposit = (amount: number) => {
