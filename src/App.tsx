@@ -933,7 +933,7 @@ export default function App() {
     riskLevel: 'Low' | 'Moderate' | 'High';
     description: string;
     thesis: string;
-  }) => {
+  }): Promise<boolean> => {
     const deadline = new Date();
     deadline.setDate(deadline.getDate() + 7);
 
@@ -961,14 +961,14 @@ export default function App() {
 
         if (error) {
           setAuthNotice({ type: 'error', message: `Proposal creation failed: ${error.message}` });
-          return;
+          return false;
         }
 
-        loadCloudClubData(activeClubId);
-        return;
+        await loadCloudClubData(activeClubId);
+        return true;
       } catch (err: any) {
         setAuthNotice({ type: 'error', message: err.message || 'Failed to submit proposal.' });
-        return;
+        return false;
       }
     }
 
@@ -1012,6 +1012,7 @@ export default function App() {
       hash: generateAuditHash(),
     };
     setDemoAuditLogs((prev) => [auditItem, ...prev]);
+    return true;
   };
 
   // Democratic Balloting: STRICT 1 VOTE PER MEMBER
