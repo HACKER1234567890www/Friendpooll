@@ -340,7 +340,7 @@ export default function App() {
       });
 
       // Determine active admin from memberships.role === 'admin'
-      const adminMember = loadedMembers.find((m) => m.role === 'Admin') || loadedMembers[0];
+      const adminMember = loadedMembers.find((m) => m.role === 'Admin');
 
       // Transform Contributions
       const loadedContribs: Contribution[] = (contribRows || []).map((c: any) =>
@@ -365,16 +365,14 @@ export default function App() {
 
       // Set state strictly from real database records (No mock data fallback)
       setRealMembers(loadedMembers);
-      if (adminMember) {
-        setRealRotation({
-          currentAdminId: adminMember.id,
-          termStartDate: clubData?.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-          termEndDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-          cycleDurationDays: 30,
-          rotationQueue: loadedMembers.map((m) => m.id),
-          history: [],
-        });
-      }
+      setRealRotation({
+        currentAdminId: adminMember?.id || '',
+        termStartDate: clubData?.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+        termEndDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+        cycleDurationDays: 30,
+        rotationQueue: loadedMembers.map((m) => m.id),
+        history: [],
+      });
       setRealContributions(loadedContribs);
       setRealProposals(loadedProposals);
       setRealAuditLogs(loadedAudits);
