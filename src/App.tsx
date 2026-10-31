@@ -1558,12 +1558,14 @@ export default function App() {
         )}
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <BottomNav
-        activeTab={activeTab}
-        onTabChange={(tab: NavTab) => setActiveTab(tab)}
-        openProposalsCount={proposals.filter((p) => p.status === 'voting').length}
-      />
+      {/* Navigation is available only after a club is selected */}
+      {(!isRealMode || Boolean(activeClubId)) && (
+        <BottomNav
+          activeTab={activeTab}
+          onTabChange={(tab: NavTab) => setActiveTab(tab)}
+          openProposalsCount={proposals.filter((p) => p.status === 'voting').length}
+        />
+      )}
 
       {/* Contribution Modal */}
       <ContributeModal
