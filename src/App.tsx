@@ -793,24 +793,8 @@ export default function App() {
         });
 
         if (error) {
-          if (error.code === 'PGRST202' || error.message?.includes('schema cache')) {
-            const { error: directErr } = await client
-              .from('contributions')
-              .update({
-                status: 'approved',
-                reviewed_by: authSession?.user?.id,
-                reviewed_at: new Date().toISOString(),
-              })
-              .eq('id', depositId);
-
-            if (directErr) {
-              setAuthNotice({ type: 'error', message: `Approval failed: ${directErr.message}` });
-              return;
-            }
-          } else {
-            setAuthNotice({ type: 'error', message: `Approval failed: ${error.message}` });
-            return;
-          }
+          setAuthNotice({ type: 'error', message: `Approval failed: ${error.message}` });
+          return;
         }
 
         loadCloudClubData(activeClubId);
@@ -882,25 +866,8 @@ export default function App() {
         });
 
         if (error) {
-          if (error.code === 'PGRST202' || error.message?.includes('schema cache')) {
-            const { error: directErr } = await client
-              .from('contributions')
-              .update({
-                status: 'rejected',
-                reviewed_by: authSession?.user?.id,
-                reviewed_at: new Date().toISOString(),
-                reference_note: reason ? `[Rejected: ${reason}]` : '[Rejected during admin review]',
-              })
-              .eq('id', depositId);
-
-            if (directErr) {
-              setAuthNotice({ type: 'error', message: `Rejection failed: ${directErr.message}` });
-              return;
-            }
-          } else {
-            setAuthNotice({ type: 'error', message: `Rejection failed: ${error.message}` });
-            return;
-          }
+          setAuthNotice({ type: 'error', message: `Rejection failed: ${error.message}` });
+          return;
         }
 
         loadCloudClubData(activeClubId);
@@ -1058,22 +1025,8 @@ export default function App() {
         });
 
         if (error) {
-          if (error.code === 'PGRST202' || error.message?.includes('schema cache')) {
-            const { error: directErr } = await client
-              .from('votes')
-              .insert({
-                proposal_id: proposalId,
-                voter_id: authSession?.user?.id,
-                choice,
-              });
-            if (directErr) {
-              setAuthNotice({ type: 'error', message: `Voting failed: ${directErr.message}` });
-              return;
-            }
-          } else {
-            setAuthNotice({ type: 'error', message: `Voting failed: ${error.message}` });
-            return;
-          }
+          setAuthNotice({ type: 'error', message: `Voting failed: ${error.message}` });
+          return;
         }
 
         loadCloudClubData(activeClubId);
@@ -1155,19 +1108,8 @@ export default function App() {
         });
 
         if (error) {
-          if (error.code === 'PGRST202' || error.message?.includes('schema cache')) {
-            const { error: directErr } = await client
-              .from('proposals')
-              .update({ status: 'closed' })
-              .eq('id', proposalId);
-            if (directErr) {
-              setAuthNotice({ type: 'error', message: `Execution failed: ${directErr.message}` });
-              return;
-            }
-          } else {
-            setAuthNotice({ type: 'error', message: `Execution failed: ${error.message}` });
-            return;
-          }
+          setAuthNotice({ type: 'error', message: `Execution failed: ${error.message}` });
+          return;
         }
 
         loadCloudClubData(activeClubId);
