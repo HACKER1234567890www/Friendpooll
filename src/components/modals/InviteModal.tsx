@@ -25,7 +25,6 @@ interface InviteModalProps {
 
 interface PendingInvite {
   id: string;
-  token: string;
   expires_at: string;
   created_at: string;
   max_uses: number;
@@ -54,17 +53,14 @@ export const InviteModal: React.FC<InviteModalProps> = ({
     if (!supabase || !clubId || !isAdmin) return;
     setLoadingInvites(true);
     try {
-      const { data, error: fetchErr } = await supabase
-        .from('invitations')
-        .select('*')
-        .eq('club_id', clubId)
-        .eq('is_revoked', false)
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
+      const { data, error: fetchErr } = await supabase.rpc('list_club_invitations', {
+        p_club_id: clubId,
+      });
 
-      if (!fetchErr && data) {
-        setPendingInvites(data.filter((i) => i.use_count < i.max_uses));
-      }
+      if (fetchErr) throw fetchErr;
+      setPendingInvites((data || []).filter((invite: PendingInvite) =>
+        invite.use_count < invite.max_uses && new Date(invite.expires_at).getTime() > Date.now()
+      ));
     } catch (err) {
       console.warn('Could not fetch invitations:', err);
     } finally {
@@ -95,13 +91,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
         p_duration_days: durationDays,
       });
 
-      if (rpcErr) {
-        if (rpcErr.code === 'PGRST202' || rpcErr.message?.includes('schema cache')) {
-          setGeneratedToken(clubId);
-          return;
-        }
-        throw rpcErr;
-      }
+      if (rpcErr) throw rpcErr;
 
       if (data?.token) {
         setGeneratedToken(data.token);
@@ -326,19 +316,15 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                       >
                         <div className="truncate">
                           <span className="font-mono text-white text-xs block truncate">
-                            {inv.token.slice(0, 16)}...
+                            Single-use invitation issued
                           </span>
                           <span className="text-[10px] text-slate-400">
                             Expires {new Date(inv.expires_at).toLocaleDateString()}
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => copyToClipboard(getInviteUrl(inv.token), 'link')}
-                          className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 text-[11px] font-semibold transition shrink-0 cursor-pointer"
-                        >
-                          Copy Link
-                        </button>
+                        <span className="text-[10px] text-slate-500 shrink-0">
+                          Code shown only once
+                        </span>
                       </div>
                     ))}
                   </div>
