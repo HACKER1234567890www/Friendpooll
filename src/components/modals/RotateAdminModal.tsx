@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Crown, ArrowRight, Shield, CheckCircle2 } from 'lucide-react';
 import { Member, AdminRotation } from '../../types';
 import { formatDate } from '../../utils/formatters';
@@ -18,25 +18,38 @@ export const RotateAdminModal: React.FC<RotateAdminModalProps> = ({
   members,
   onRotateAdmin,
 }) => {
-  if (!isOpen) return null;
-
   const currentAdmin = members.find((m) => m.id === rotation.currentAdminId) || members[0];
-  
-  // Find next member in rotation queue
+
+  // Prefer the scheduled next member, but safely fall back to another active member.
+  const eligibleNextMembers = members.filter((m) => m.id !== currentAdmin?.id);
   const currentQueueIndex = rotation.rotationQueue.indexOf(rotation.currentAdminId);
-  const nextQueueIndex = (currentQueueIndex + 1) % rotation.rotationQueue.length;
-  const defaultNextId = rotation.rotationQueue[nextQueueIndex];
+  const queuedNextId = rotation.rotationQueue.length > 0
+    ? rotation.rotationQueue[(currentQueueIndex + 1 + rotation.rotationQueue.length) % rotation.rotationQueue.length]
+    : undefined;
+  const defaultNextId = eligibleNextMembers.some((m) => m.id === queuedNextId)
+    ? queuedNextId
+    : eligibleNextMembers[0]?.id || '';
 
   const [selectedNextId, setSelectedNextId] = useState<string>(defaultNextId);
   const [rotationNote, setRotationNote] = useState('');
 
-  const nextAdmin = members.find((m) => m.id === selectedNextId) || members[1];
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedNextId(defaultNextId);
+      setRotationNote('');
+    }
+  }, [isOpen, defaultNextId]);
+
+  const nextAdmin = eligibleNextMembers.find((m) => m.id === selectedNextId);
 
   const handleConfirm = (e: React.FormEvent) => {
     e.preventDefault();
-    onRotateAdmin(selectedNextId, rotationNote.trim() || 'Scheduled democratic leadership baton transfer');
+    if (!nextAdmin) return;
+    onRotateAdmin(nextAdmin.id, rotationNote.trim() || 'Scheduled democratic leadership baton transfer');
     onClose();
   };
+
+  if (!isOpen || !currentAdmin || !nextAdmin) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
