@@ -13,7 +13,7 @@ interface ContributeModalProps {
     amount: number;
     note: string;
     method: 'Simulated UPI' | 'Simulated IMPS' | 'Club Quick-Deposit';
-  }) => void;
+  }) => Promise<boolean>;
 }
 
 export const ContributeModal: React.FC<ContributeModalProps> = ({
@@ -28,26 +28,36 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({
   const [note, setNote] = useState('');
   const [method, setMethod] = useState<'Simulated UPI' | 'Simulated IMPS' | 'Club Quick-Deposit'>('Simulated UPI');
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
   const presets = [100, 200, 250, 350, 500];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (amount < 100 || amount > 500) {
       setError('Simulated deposit must be strictly between ₹100 and ₹500.');
       return;
     }
     setError(null);
-    onSimulateContribution({
-      memberId: selectedMemberId,
-      amount,
-      note: note.trim() || 'Simulated micro-deposit tranche',
-      method,
-    });
-    setNote('');
-    onClose();
+    setIsSubmitting(true);
+    try {
+      const submitted = await onSimulateContribution({
+        memberId: selectedMemberId,
+        amount,
+        note: note.trim() || 'Simulated micro-deposit tranche',
+        method,
+      });
+      if (!submitted) {
+        setError('The simulated deposit could not be saved. Please retry.');
+        return;
+      }
+      setNote('');
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -196,9 +206,10 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({
           <div className="pt-2">
             <button
               type="submit"
+              disabled={isSubmitting}
               className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-[#00f090] to-[#10b981] text-[#041a12] font-bold text-sm shadow-lg hover:brightness-110 active:scale-[0.98] transition cursor-pointer"
             >
-              <span>Submit Simulated Deposit for Approval</span>
+              <span>{isSubmitting ? 'Submitting...' : 'Submit Simulated Deposit for Approval'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
