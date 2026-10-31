@@ -6,6 +6,7 @@ interface EditMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
   member: Member | null;
+  isRealMode?: boolean;
   onSaveMember: (updatedMember: Member) => Promise<boolean>;
 }
 
@@ -23,6 +24,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
   isOpen,
   onClose,
   member,
+  isRealMode = false,
   onSaveMember,
 }) => {
   const [name, setName] = useState('');
@@ -78,7 +80,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <UserCheck className="w-5 h-5 text-[#00f090]" />
-              <h3 className="text-lg font-bold text-white tracking-tight">Configure Member Profile</h3>
+              <h3 className="text-lg font-bold text-white tracking-tight">{isRealMode ? 'Update Display Name' : 'Configure Member Profile'}</h3>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">Customize member identity and details</p>
           </div>
@@ -130,51 +132,55 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
             />
           </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-[#041a12] border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#00f090] transition"
-            />
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-              Mobile Number
-            </label>
-            <input
-              type="text"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full bg-[#041a12] border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#00f090] transition"
-            />
-          </div>
-
-          {/* Accent Color */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-2 uppercase tracking-wider">
-              Theme Color Tag
-            </label>
-            <div className="flex items-center gap-2">
-              {COLOR_OPTIONS.map((c) => (
-                <button
-                  type="button"
-                  key={c}
-                  onClick={() => setColor(c)}
-                  className={`w-7 h-7 rounded-xl transition cursor-pointer flex items-center justify-center ${
-                    color === c ? 'ring-2 ring-white scale-110' : 'opacity-80 hover:opacity-100'
-                  }`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
+          {!isRealMode && (
+            <>
+            {/* Email */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-[#041a12] border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#00f090] transition"
+              />
             </div>
-          </div>
+  
+            {/* Phone */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+                Mobile Number
+              </label>
+              <input
+                type="text"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full bg-[#041a12] border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#00f090] transition"
+              />
+            </div>
+  
+            {/* Accent Color */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-2 uppercase tracking-wider">
+                Theme Color Tag
+              </label>
+              <div className="flex items-center gap-2">
+                {COLOR_OPTIONS.map((c) => (
+                  <button
+                    type="button"
+                    key={c}
+                    onClick={() => setColor(c)}
+                    className={`w-7 h-7 rounded-xl transition cursor-pointer flex items-center justify-center ${
+                      color === c ? 'ring-2 ring-white scale-110' : 'opacity-80 hover:opacity-100'
+                    }`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+            </div>
+            </>
+          )}
 
           {error && (
             <p className="text-xs text-rose-400">{error}</p>
