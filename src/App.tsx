@@ -60,6 +60,7 @@ export default function App() {
   // Supabase State & Auth Session
   const [authSession, setAuthSession] = useState<any>(null);
   const authSessionRef = useRef<any>(null);
+  const cloudLoadSequenceRef = useRef(0);
   useEffect(() => {
     authSessionRef.current = authSession;
   }, [authSession]);
@@ -220,97 +221,75 @@ export default function App() {
   const loadCloudClubData = useCallback(async (clubId: string) => {
     const client = supabase;
     if (!client) return;
+    const loadSequence = ++cloudLoadSequenceRef.current;
     setIsCloudSyncing(true);
 
     try {
-      // 1. Fetch Club Information
+      // Fetch the complete club snapshot before replacing visible state. A failed
+      // query must not make a healthy screen look like an empty club.
       const { data: clubData, error: clubErr } = await client
         .from('clubs')
         .select('*')
         .eq('id', clubId)
         .single();
+      if (clubErr) throw new Error(`Could not load club details: ${clubErr.message}`);
 
-      if (!clubErr && clubData?.name) {
-        setActiveClubName(clubData.name);
-      }
-
-      // 2. Fetch Memberships & Joined Profiles (Two-step fetch to avoid schema-cache constraint errors)
       const { data: rawMemberships, error: memErr } = await client
         .from('memberships')
         .select('*')
         .eq('club_id', clubId);
-
+      if (memErr) throw new Error(`Could not load club members: ${memErr.message}`);
       const membershipRows = rawMemberships || [];
-      if (memErr) {
-        console.warn('Memberships query note:', memErr);
-      }
 
-      // Fetch profiles for all members in this club
       const userIds = membershipRows.map((m: any) => m.user_id).filter(Boolean);
       const profileMap: Record<string, any> = {};
       if (userIds.length > 0) {
-        const { data: profilesData } = await client
+        const { data: profilesData, error: profilesErr } = await client
           .from('profiles')
           .select('user_id, display_name')
           .in('user_id', userIds);
+        if (profilesErr) throw new Error(`Could not load member profiles: ${profilesErr.message}`);
         (profilesData || []).forEach((p: any) => {
           profileMap[p.user_id] = p;
         });
       }
 
-      // Record current caller's membership ID if available
-      const currentUserId = authSessionRef.current?.user?.id;
-      if (currentUserId && membershipRows.length > 0) {
-        const myMembership = membershipRows.find((m: any) => m.user_id === currentUserId);
-        if (myMembership) {
-        }
-      }
-
-      // 3. Fetch Contributions for this club
       const { data: contribRows, error: contribErr } = await client
         .from('contributions')
         .select('*')
         .eq('club_id', clubId)
         .order('created_at', { ascending: false });
+      if (contribErr) throw new Error(`Could not load the contribution ledger: ${contribErr.message}`);
 
-      if (contribErr) {
-        console.warn('Contributions query note:', contribErr);
-      }
-
-      // 4. Fetch Proposals & Votes
       const { data: propRows, error: propErr } = await client
         .from('proposals')
         .select('*')
         .eq('club_id', clubId)
         .order('created_at', { ascending: false });
-
-      if (propErr) {
-        console.warn('Proposals query note:', propErr);
-      }
+      if (propErr) throw new Error(`Could not load club proposals: ${propErr.message}`);
 
       const propIds = (propRows || []).map((p: any) => p.id);
       let voteRows: any[] = [];
       if (propIds.length > 0) {
-        const { data: votes } = await client
+        const { data: votes, error: votesErr } = await client
           .from('votes')
           .select('*')
           .in('proposal_id', propIds);
+        if (votesErr) throw new Error(`Could not load proposal votes: ${votesErr.message}`);
         voteRows = votes || [];
       }
 
-      // 5. Fetch Audit Logs
       const { data: auditRows, error: auditErr } = await client
         .from('audit_logs')
         .select('*')
         .eq('club_id', clubId)
         .order('created_at', { ascending: false })
         .limit(50);
+      if (auditErr) console.warn('Audit logs query note:', auditErr);
 
-      if (auditErr) {
-        console.warn('Audit logs query note:', auditErr);
-      }
+      // Ignore stale responses when a user switches clubs or refreshes quickly.
+      if (loadSequence !== cloudLoadSequenceRef.current) return;
 
-      // Build name mapping for members
       const memberNameMap: Record<string, string> = {};
       membershipRows.forEach((m: any) => {
         const name = profileMap[m.user_id]?.display_name || 'Member';
@@ -318,51 +297,38 @@ export default function App() {
         memberNameMap[m.id] = name;
       });
 
-      // Transform Members
       const approvedContribs = (contribRows || []).filter((c: any) => c.status === 'approved');
       const loadedMembers: Member[] = membershipRows.map((m: any, idx: number) => {
         const uProfile = profileMap[m.user_id] || {
           user_id: m.user_id,
           display_name: memberNameMap[m.user_id] || 'Club Member',
         };
-        return mapProfileAndMembershipToMember(
-          uProfile,
-          m,
-          approvedContribs,
-          idx,
-          true
-        );
+        return mapProfileAndMembershipToMember(uProfile, m, approvedContribs, idx, true);
       });
 
-      // Determine active admin from memberships.role === 'admin'
       const adminMember = loadedMembers.find((m) => m.role === 'Admin');
-
-      // Transform Contributions
-      const loadedContribs: Contribution[] = (contribRows || []).map((c: any) =>
-        mapContributionRowToContribution(c, memberNameMap)
+      const loadedContribs: Contribution[] = (contribRows || []).map((row: any) =>
+        mapContributionRowToContribution(row, memberNameMap)
       );
 
-      // Transform Proposals & Votes
       const loadedProposals: Proposal[] = (propRows || []).map((p: any) => {
         const matchingVotes = voteRows.filter((v: any) => v.proposal_id === p.id);
         const votesObj: Record<string, any> = {};
         matchingVotes.forEach((v: any) => {
           votesObj[v.voter_id] = mapVoteRowToVote(v, memberNameMap);
         });
-        const authorName = memberNameMap[p.created_by] || 'Member';
-        return mapProposalRowToProposal(p, authorName, votesObj);
+        return mapProposalRowToProposal(p, memberNameMap[p.created_by] || 'Member', votesObj);
       });
 
-      // Transform Audit Logs
       const loadedAudits: AuditLogItem[] = (auditRows || []).map((a: any) =>
         mapAuditLogRowToAuditLogItem(a)
       );
 
-      // Set state strictly from real database records (No mock data fallback)
+      setActiveClubName(clubData.name || 'Friendpool');
       setRealMembers(loadedMembers);
       setRealRotation({
         currentAdminId: adminMember?.id || '',
-        termStartDate: clubData?.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+        termStartDate: clubData.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
         termEndDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
         cycleDurationDays: 30,
         rotationQueue: loadedMembers.map((m) => m.id),
@@ -371,10 +337,16 @@ export default function App() {
       setRealContributions(loadedContribs);
       setRealProposals(loadedProposals);
       setRealAuditLogs(loadedAudits);
-    } catch (err) {
-      console.warn('Error loading Supabase cloud club data:', err);
+    } catch (err: any) {
+      if (loadSequence === cloudLoadSequenceRef.current) {
+        console.warn('Error loading Supabase cloud club data:', err);
+        setAuthNotice({
+          type: 'error',
+          message: err?.message || 'Could not refresh club data. Your last successful view has been kept.',
+        });
+      }
     } finally {
-      setIsCloudSyncing(false);
+      if (loadSequence === cloudLoadSequenceRef.current) setIsCloudSyncing(false);
     }
   }, []);
 
