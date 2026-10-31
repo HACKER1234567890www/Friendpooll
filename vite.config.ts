@@ -14,9 +14,9 @@ export default defineConfig(() => {
         includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
           id: '/',
-          name: 'Friendpool — Collaborative Investment Club',
+          name: 'Friendpool — Collaborative Club Simulation',
           short_name: 'Friendpool',
-          description: 'Democratic social micro-investing club dashboard with rotating administrators, proposals, and transparent ledgers.',
+          description: 'A private club-management simulation with rotating administrators, proposals, voting, and simulated contribution ledgers.',
           theme_color: '#062319',
           background_color: '#062319',
           display: 'standalone',
