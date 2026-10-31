@@ -61,8 +61,9 @@ export const InviteModal: React.FC<InviteModalProps> = ({
       setPendingInvites((data || []).filter((invite: PendingInvite) =>
         invite.use_count < invite.max_uses && new Date(invite.expires_at).getTime() > Date.now()
       ));
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Could not fetch invitations:', err);
+      setError(err.message || 'Could not load pending invitations.');
     } finally {
       setLoadingInvites(false);
     }
@@ -96,6 +97,8 @@ export const InviteModal: React.FC<InviteModalProps> = ({
       if (data?.token) {
         setGeneratedToken(data.token);
         fetchPendingInvites();
+      } else {
+        setError('The invitation service did not return a token. Please try again.');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to generate invitation.');
