@@ -18,7 +18,7 @@ interface NewProposalModalProps {
     riskLevel: 'Low' | 'Moderate' | 'High';
     description: string;
     thesis: string;
-  }) => void;
+  }) => Promise<boolean>;
 }
 
 const CATEGORIES: ProposalCategory[] = [
@@ -51,7 +51,7 @@ export const NewProposalModal: React.FC<NewProposalModalProps> = ({
 
   const currentMember = members.find((m) => m.id === currentMemberId) || members[0];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       setError('Please provide a descriptive proposal title.');
@@ -66,7 +66,7 @@ export const NewProposalModal: React.FC<NewProposalModalProps> = ({
       return;
     }
 
-    onCreateProposal({
+    const created = await onCreateProposal({
       title: title.trim(),
       category,
       requestedAmount,
@@ -77,6 +77,7 @@ export const NewProposalModal: React.FC<NewProposalModalProps> = ({
       thesis: thesis.trim(),
     });
 
+    if (!created) return;
     onClose();
   };
 
