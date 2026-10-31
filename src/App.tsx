@@ -711,22 +711,7 @@ export default function App() {
           reference_note: `${referenceCode} via ${method}. ${note}`,
         });
 
-        if (insertErr) {
-          // If foreign key constraint failed on memberships, retry with membership ID
-          if (insertErr.message?.includes('contributions_member_id_fkey') && currentMembershipId && contribFkTarget.current === 'user_id') {
-            contribFkTarget.current = 'membership_id';
-            const { error: retryErr } = await client.from('contributions').insert({
-              club_id: activeClubId,
-              member_id: currentMembershipId,
-              amount_paise: amountPaise,
-              status: 'pending',
-              reference_note: `${referenceCode} via ${method}. ${note}`,
-            });
-            if (retryErr) throw retryErr;
-          } else {
-            throw insertErr;
-          }
-        }
+        if (insertErr) throw insertErr;
 
         loadCloudClubData(activeClubId);
         return;
@@ -1159,17 +1144,8 @@ export default function App() {
         });
 
         if (error) {
-          if (error.code === 'PGRST202' || error.message?.includes('schema cache')) {
-            await client.from('memberships').update({ role: 'member' }).eq('club_id', activeClubId).eq('user_id', authSession.user.id);
-            const { error: directErr } = await client.from('memberships').update({ role: 'admin' }).eq('club_id', activeClubId).eq('user_id', nextAdminId);
-            if (directErr) {
-              setAuthNotice({ type: 'error', message: `Rotation failed: ${directErr.message}` });
-              return;
-            }
-          } else {
-            setAuthNotice({ type: 'error', message: `Rotation failed: ${error.message}` });
-            return;
-          }
+          setAuthNotice({ type: 'error', message: `Rotation failed: ${error.message}` });
+          return;
         }
 
         setAuthNotice({
