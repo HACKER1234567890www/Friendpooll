@@ -698,13 +698,11 @@ export default function App() {
     const client = supabase;
     if (isRealMode && client && activeClubId && authSession?.user) {
       try {
-        const callerMemberId = contribFkTarget.current === 'user_id' 
-          ? authSession.user.id 
-          : (currentMembershipId || authSession.user.id);
-
+        // The database contribution policy binds every submission to auth.uid().
+        // Never accept a member identity supplied by the client for a real account.
         const { error: insertErr } = await client.from('contributions').insert({
           club_id: activeClubId,
-          member_id: callerMemberId,
+          member_id: authSession.user.id,
           amount_paise: amountPaise,
           status: 'pending',
           reference_note: `${referenceCode} via ${method}. ${note}`,
@@ -1572,7 +1570,7 @@ export default function App() {
       <ContributeModal
         isOpen={isContributeModalOpen}
         onClose={() => setIsContributeModalOpen(false)}
-        members={members}
+        members={isRealMode ? [currentMember] : members}
         currentMemberId={currentMemberId}
         onSimulateContribution={handleSimulateContribution}
       />
