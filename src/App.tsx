@@ -1663,6 +1663,7 @@ export default function App() {
       {/* Edit Member Profile Modal */}
       {memberToEdit && (
         <EditMemberModal
+          isRealMode={isRealMode}
           isOpen={Boolean(memberToEdit)}
           onClose={() => setMemberToEdit(null)}
           member={memberToEdit}
