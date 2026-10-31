@@ -652,55 +652,11 @@ export default function App() {
       });
 
       if (error) {
-        if (error.code === 'PGRST202' || error.message?.includes('schema cache')) {
-          const cleanToken = inviteToken.trim();
-          let targetClubId: string | null = null;
-          let targetClubName: string = 'Friendpool';
-
-          // 1. Direct UUID match for club ID
-          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanToken);
-          if (isUuid) {
-            const { data: cData } = await client.from('clubs').select('id, name').eq('id', cleanToken).single();
-            if (cData) {
-              targetClubId = cData.id;
-              targetClubName = cData.name || 'Friendpool';
-            }
-          }
-
-          // 2. Lookup invitations table if exists
-          if (!targetClubId) {
-            const { data: invData } = await client.from('invitations').select('club_id').eq('token', cleanToken).single();
-            if (invData?.club_id) {
-              targetClubId = invData.club_id;
-              const { data: cData } = await client.from('clubs').select('name').eq('id', invData.club_id).single();
-              if (cData?.name) targetClubName = cData.name;
-            }
-          }
-
-          if (targetClubId) {
-            const { error: insErr } = await client.from('memberships').insert({
-              club_id: targetClubId,
-              user_id: authSession.user.id,
-              role: 'member',
-            });
-            if (!insErr) {
-              setActiveClubId(targetClubId);
-              setActiveClubName(targetClubName);
-              setPendingInviteToken('');
-              setAuthNotice({
-                type: 'success',
-                message: `Joined "${targetClubName}" successfully! You are now a democratic voting member.`,
-              });
-              await loadCloudClubData(targetClubId);
-              return true;
-            } else {
-              setAuthNotice({ type: 'error', message: `Could not join club: ${insErr.message}` });
-              return false;
-            }
-          }
-        }
         console.error('Join club RPC error:', error);
-        setAuthNotice({ type: 'error', message: `Could not join club: ${error.message}` });
+        setAuthNotice({
+          type: 'error',
+          message: error.message || 'Invalid, expired, or already-used invitation code.',
+        });
         return false;
       }
 
