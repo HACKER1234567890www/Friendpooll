@@ -457,12 +457,15 @@ export default function App() {
           if (existingProfile) {
             setUserProfile(existingProfile);
           } else {
-            const { data: newProfile } = await client
+            const { data: newProfile, error: profileError } = await client
               .from('profiles')
               .upsert({ user_id: session.user.id, display_name: defaultName })
               .select('*')
               .single();
-            if (newProfile) setUserProfile(newProfile);
+            if (profileError) {
+              throw new Error(`Could not prepare your member profile: ${profileError.message}`);
+            }
+            setUserProfile(newProfile);
           }
 
           if (authType === 'signup' || authType === 'email_change' || hasAccessToken || code) {
@@ -573,6 +576,11 @@ export default function App() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'memberships', filter: `club_id=eq.${activeClubId}` },
+        () => loadCloudClubData(activeClubId)
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'votes' },
         () => loadCloudClubData(activeClubId)
       )
       .on(
