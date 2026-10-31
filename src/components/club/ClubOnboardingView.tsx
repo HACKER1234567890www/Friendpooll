@@ -45,7 +45,7 @@ export const ClubOnboardingView: React.FC<ClubOnboardingViewProps> = ({
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clubName.trim()) {
-      setLocalError('Please enter a name for your investment club.');
+      setLocalError('Please enter a name for your club simulation.');
       return;
     }
     setLocalError(null);
@@ -100,7 +100,7 @@ export const ClubOnboardingView: React.FC<ClubOnboardingViewProps> = ({
                 Welcome, {userDisplayName || 'Member'}!
               </h2>
               <p className="text-sm text-slate-300 mt-1 max-w-xl leading-relaxed">
-                Your Supabase account is confirmed. You are not currently assigned to any private investment club. Start your own club as founding Administrator, or redeem an invitation code.
+                Your Supabase account is confirmed. You are not currently assigned to any private club simulation. Start your own club as founding Administrator, or redeem an invitation code.
               </p>
             </div>
           </div>
@@ -156,7 +156,7 @@ export const ClubOnboardingView: React.FC<ClubOnboardingViewProps> = ({
           <div className="space-y-1">
             <h3 className="text-xl font-bold text-white flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-[#00f090]" />
-              <span>Create Your Private Investment Club</span>
+              <span>Create Your Private Club Simulation</span>
             </h3>
             <p className="text-xs text-slate-300 leading-relaxed">
               As the club founder, you will be initialized as the <strong>Administrator</strong>. You can invite up to 4 trusted friends (max 5 members total) and rotate stewardship every 30 days.
@@ -181,7 +181,7 @@ export const ClubOnboardingView: React.FC<ClubOnboardingViewProps> = ({
                 className="w-full bg-[#041a12] border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#00f090] transition disabled:opacity-50"
               />
               <p className="text-[11px] text-slate-400 mt-1.5">
-                Choose a memorable name for your circle of 3 to 5 micro-investors.
+                Choose a memorable name for your circle of 3 to 5 members.
               </p>
             </div>
 
@@ -272,8 +272,8 @@ export const ClubOnboardingView: React.FC<ClubOnboardingViewProps> = ({
                 <span>What happens after joining?</span>
               </div>
               <ul className="list-disc list-inside space-y-1 text-slate-400 text-[11px]">
-                <li>You gain immediate democratic voting rights on all club investment proposals.</li>
-                <li>You can submit micro-deposits (₹100–₹500) into the shared pool.</li>
+                <li>You gain immediate democratic voting rights on all club simulation proposals.</li>
+                <li>You can record simulated contributions in the club ledger.</li>
                 <li>You enter the administrator rotation queue for future stewardship.</li>
               </ul>
             </div>
