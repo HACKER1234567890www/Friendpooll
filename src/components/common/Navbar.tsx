@@ -76,7 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
             <p className="text-[11px] text-slate-400 hidden xs:block -mt-0.5">
-              {isRealAccount ? 'Private Micro-Investment Club' : 'Simulated Sandbox'}
+              {isRealAccount ? 'Private Club Simulation' : 'Simulated Sandbox'}
             </p>
           </div>
         </div>
