@@ -61,6 +61,7 @@ export default function App() {
   const [authSession, setAuthSession] = useState<any>(null);
   const authSessionRef = useRef<any>(null);
   const cloudLoadSequenceRef = useRef(0);
+  const authResolutionSequenceRef = useRef(0);
   useEffect(() => {
     authSessionRef.current = authSession;
   }, [authSession]);
@@ -362,13 +363,12 @@ export default function App() {
 
     const handleAuthCallbackAndSession = async () => {
       if (typeof window === 'undefined') return;
+      const resolutionSequence = ++authResolutionSequenceRef.current;
 
       const hash = window.location.hash || '';
       const search = window.location.search || '';
-
       const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.substring(1) : hash);
       const searchParams = new URLSearchParams(search.startsWith('?') ? search.substring(1) : search);
-
       const error = hashParams.get('error') || searchParams.get('error');
       const errorCode = hashParams.get('error_code') || searchParams.get('error_code');
       const errorDescription = hashParams.get('error_description') || searchParams.get('error_description');
@@ -377,13 +377,11 @@ export default function App() {
       const inviteParam = searchParams.get('invite') || hashParams.get('invite');
       const hasAccessToken = hashParams.has('access_token');
 
-      if (inviteParam) {
-        setPendingInviteToken(inviteParam);
-      }
+      if (inviteParam) setPendingInviteToken(inviteParam);
 
       if (error || errorDescription) {
         const decodedMsg = errorDescription
-          ? decodeURIComponent(errorDescription.replace(/\+/g, ' '))
+          ? decodeURIComponent(errorDescription.replace(/\\+/g, ' '))
           : 'Email verification link was invalid or has expired.';
         setAuthNotice({
           type: 'error',
@@ -408,68 +406,86 @@ export default function App() {
           if (sessionErr) throw sessionErr;
           session = data.session;
         }
+        if (!isSubscribed || resolutionSequence !== authResolutionSequenceRef.current) return;
 
-        if (session?.user && isSubscribed) {
+        if (session?.user) {
           setAuthSession(session);
           setIsDemoMode(false);
           setIsAuthModalOpen(false);
+          setActiveClubId(null);
+          setUserProfile(null);
 
           const defaultName =
             session.user.user_metadata?.display_name ||
             session.user.email?.split('@')[0] ||
             'Friendpool Member';
 
-          // Fetch or upsert real user profile
           const { data: existingProfile } = await client
             .from('profiles')
             .select('*')
             .eq('user_id', session.user.id)
             .single();
+          if (!isSubscribed || resolutionSequence !== authResolutionSequenceRef.current) return;
 
-          if (existingProfile) {
-            setUserProfile(existingProfile);
-          } else {
+          let profile = existingProfile;
+          if (!profile) {
             const { data: newProfile, error: profileError } = await client
               .from('profiles')
               .upsert({ user_id: session.user.id, display_name: defaultName })
               .select('*')
               .single();
-            if (profileError) {
-              throw new Error(`Could not prepare your member profile: ${profileError.message}`);
-            }
-            setUserProfile(newProfile);
+            if (profileError) throw new Error(`Could not prepare your member profile: ${profileError.message}`);
+            profile = newProfile;
           }
+          if (!isSubscribed || resolutionSequence !== authResolutionSequenceRef.current) return;
+          setUserProfile(profile);
 
           if (authType === 'signup' || authType === 'email_change' || hasAccessToken || code) {
             setAuthNotice({
               type: 'success',
-              message:
-                authType === 'signup'
-                  ? 'Email confirmed successfully! You are now signed in to Friendpool.'
-                  : 'Email authentication confirmed successfully. Welcome back!',
+              message: authType === 'signup'
+                ? 'Email confirmed successfully! You are now signed in to Friendpool.'
+                : 'Email authentication confirmed successfully. Welcome back!',
             });
           }
 
-          // Fetch user's club membership
           const { data: memberRows, error: memErr } = await client
             .from('memberships')
             .select('id, club_id, role')
             .eq('user_id', session.user.id)
             .limit(1);
+          if (!isSubscribed || resolutionSequence !== authResolutionSequenceRef.current) return;
+          if (memErr) throw new Error(`Could not resolve your club membership: ${memErr.message}`);
 
-          if (!memErr && memberRows && memberRows.length > 0 && memberRows[0]?.club_id) {
+          if (memberRows?.[0]?.club_id) {
             setActiveClubId(memberRows[0].club_id);
-            loadCloudClubData(memberRows[0].club_id);
-          } else {
-            setActiveClubId(null);
+            await loadCloudClubData(memberRows[0].club_id);
           }
+        } else if (isSubscribed && resolutionSequence === authResolutionSequenceRef.current) {
+          cloudLoadSequenceRef.current += 1;
+          setIsCloudSyncing(false);
+          setAuthSession(null);
+          setActiveClubId(null);
+          setUserProfile(null);
+          setRealMembers([]);
+          setRealContributions([]);
+          setRealProposals([]);
+          setRealAuditLogs([]);
+          setRealRotation({
+            currentAdminId: '',
+            termStartDate: new Date().toISOString().slice(0, 10),
+            termEndDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+            cycleDurationDays: 30,
+            rotationQueue: [],
+            history: [],
+          });
         }
       } catch (err: any) {
-        console.warn('Auth callback handling notice:', err);
-        if (code || hasAccessToken) {
+        if (isSubscribed && resolutionSequence === authResolutionSequenceRef.current) {
+          console.warn('Auth callback handling notice:', err);
           setAuthNotice({
             type: 'error',
-            message: err.message || 'Failed to complete email confirmation callback.',
+            message: err.message || 'Failed to complete authentication.',
           });
         }
       } finally {
@@ -487,43 +503,87 @@ export default function App() {
 
     const { data: authListener } = client.auth.onAuthStateChange(async (_event, session) => {
       if (!isSubscribed) return;
-      setAuthSession((prev: any) => {
-        if (prev?.user?.id === session?.user?.id && prev?.access_token === session?.access_token) {
-          return prev;
-        }
-        return session;
-      });
-      if (session?.user) {
-        setIsDemoMode(false);
-        setIsAuthModalOpen(false);
-        const { data: p } = await client
+      const resolutionSequence = ++authResolutionSequenceRef.current;
+      const sameUser = Boolean(
+        session?.user?.id && authSessionRef.current?.user?.id === session.user.id
+      );
+
+      setAuthSession(session);
+      if (!sameUser) {
+        cloudLoadSequenceRef.current += 1;
+        setIsCloudSyncing(false);
+        setActiveClubId(null);
+        setUserProfile(null);
+        setRealMembers([]);
+        setRealContributions([]);
+        setRealProposals([]);
+        setRealAuditLogs([]);
+        setRealRotation({
+          currentAdminId: '',
+          termStartDate: new Date().toISOString().slice(0, 10),
+          termEndDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+          cycleDurationDays: 30,
+          rotationQueue: [],
+          history: [],
+        });
+      }
+
+      if (!session?.user) return;
+      setIsDemoMode(false);
+      setIsAuthModalOpen(false);
+
+      try {
+        const defaultName =
+          session.user.user_metadata?.display_name ||
+          session.user.email?.split('@')[0] ||
+          'Friendpool Member';
+        const { data: existingProfile } = await client
           .from('profiles')
           .select('*')
           .eq('user_id', session.user.id)
           .single();
-        if (p && isSubscribed) setUserProfile(p);
+        if (!isSubscribed || resolutionSequence !== authResolutionSequenceRef.current) return;
 
-        client
+        let profile = existingProfile;
+        if (!profile) {
+          const { data: newProfile, error: profileError } = await client
+            .from('profiles')
+            .upsert({ user_id: session.user.id, display_name: defaultName })
+            .select('*')
+            .single();
+          if (profileError) throw profileError;
+          profile = newProfile;
+        }
+        if (!isSubscribed || resolutionSequence !== authResolutionSequenceRef.current) return;
+        setUserProfile(profile);
+
+        const { data: memberRows, error: membershipError } = await client
           .from('memberships')
           .select('id, club_id, role')
           .eq('user_id', session.user.id)
-          .limit(1)
-          .then(({ data }) => {
-            if (data && data[0]?.club_id && isSubscribed) {
-              setActiveClubId(data[0].club_id);
-              loadCloudClubData(data[0].club_id);
-            } else if (isSubscribed) {
-              setActiveClubId(null);
-            }
+          .limit(1);
+        if (!isSubscribed || resolutionSequence !== authResolutionSequenceRef.current) return;
+        if (membershipError) throw membershipError;
+
+        if (memberRows?.[0]?.club_id) {
+          setActiveClubId(memberRows[0].club_id);
+          await loadCloudClubData(memberRows[0].club_id);
+        } else {
+          setActiveClubId(null);
+        }
+      } catch (err: any) {
+        if (isSubscribed && resolutionSequence === authResolutionSequenceRef.current) {
+          setAuthNotice({
+            type: 'error',
+            message: err?.message || 'Could not finish loading your account.',
           });
-      } else {
-        setActiveClubId(null);
-        setUserProfile(null);
+        }
       }
     });
 
     return () => {
       isSubscribed = false;
+      authResolutionSequenceRef.current += 1;
       authListener.subscription.unsubscribe();
     };
   }, [loadCloudClubData, supabaseCfg.client, supabaseCfg.isConfigured]);
