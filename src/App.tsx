@@ -66,7 +66,6 @@ export default function App() {
   const [activeClubId, setActiveClubId] = useState<string | null>(null);
   const [activeClubName, setActiveClubName] = useState<string>('Friendpool');
   const [userProfile, setUserProfile] = useState<{ user_id: string; display_name: string } | null>(null);
-  const [currentMembershipId, setCurrentMembershipId] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
@@ -162,9 +161,6 @@ export default function App() {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [proposalToVote, setProposalToVote] = useState<Proposal | null>(null);
-
-  // Cached FK target for contributions.member_id: 'user_id' | 'membership_id'
-  const contribFkTarget = useRef<'user_id' | 'membership_id'>('user_id');
 
   // Determine active mode
   const isAuthenticated = Boolean(authSession?.user);
@@ -267,7 +263,6 @@ export default function App() {
       if (currentUserId && membershipRows.length > 0) {
         const myMembership = membershipRows.find((m: any) => m.user_id === currentUserId);
         if (myMembership) {
-          setCurrentMembershipId(myMembership.id);
         }
       }
 
@@ -489,7 +484,6 @@ export default function App() {
 
           if (!memErr && memberRows && memberRows.length > 0 && memberRows[0]?.club_id) {
             setActiveClubId(memberRows[0].club_id);
-            setCurrentMembershipId(memberRows[0].id);
             loadCloudClubData(memberRows[0].club_id);
           } else {
             setActiveClubId(null);
@@ -542,7 +536,6 @@ export default function App() {
           .then(({ data }) => {
             if (data && data[0]?.club_id && isSubscribed) {
               setActiveClubId(data[0].club_id);
-              setCurrentMembershipId(data[0].id);
               loadCloudClubData(data[0].club_id);
             } else if (isSubscribed) {
               setActiveClubId(null);
