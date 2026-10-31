@@ -1289,30 +1289,32 @@ export default function App() {
   };
 
   // Profile Save / Update
-  const handleSaveMember = async (updatedMember: Member) => {
-    const client = supabase;
-    if (isRealMode && client && authSession?.user && updatedMember.id === authSession.user.id) {
+  const handleSaveMember = async (updatedMember: Member): Promise<boolean> => {
+    if (isRealMode) {
+      const client = supabase;
+      if (!client || !authSession?.user || updatedMember.id !== authSession.user.id) {
+        setAuthNotice({ type: 'error', message: 'In a real club, you can only update your own display name.' });
+        return false;
+      }
+
       try {
         const { error } = await client
           .from('profiles')
           .update({ display_name: updatedMember.name })
           .eq('user_id', authSession.user.id);
 
-        if (error) {
-          setAuthNotice({ type: 'error', message: `Failed to update display name: ${error.message}` });
-          return;
-        }
-
+        if (error) throw error;
         setUserProfile((prev) => (prev ? { ...prev, display_name: updatedMember.name } : null));
-        if (activeClubId) loadCloudClubData(activeClubId);
-        return;
+        if (activeClubId) await loadCloudClubData(activeClubId);
+        return true;
       } catch (err: any) {
-        console.warn('Profile update notice:', err);
+        setAuthNotice({ type: 'error', message: `Failed to update display name: ${err?.message || 'Please try again.'}` });
+        return false;
       }
     }
 
-    // Demo Mode update
     setDemoMembers((prev) => prev.map((m) => (m.id === updatedMember.id ? updatedMember : m)));
+    return true;
   };
 
   // Remove Member (Demo Mode only)
