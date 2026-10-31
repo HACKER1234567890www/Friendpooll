@@ -8,7 +8,7 @@ interface RotateAdminModalProps {
   onClose: () => void;
   rotation: AdminRotation;
   members: Member[];
-  onRotateAdmin: (nextAdminId: string, note?: string) => void;
+  onRotateAdmin: (nextAdminId: string, note?: string) => Promise<boolean>;
 }
 
 export const RotateAdminModal: React.FC<RotateAdminModalProps> = ({
@@ -42,10 +42,11 @@ export const RotateAdminModal: React.FC<RotateAdminModalProps> = ({
 
   const nextAdmin = eligibleNextMembers.find((m) => m.id === selectedNextId);
 
-  const handleConfirm = (e: React.FormEvent) => {
+  const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nextAdmin) return;
-    onRotateAdmin(nextAdmin.id, rotationNote.trim() || 'Scheduled democratic leadership baton transfer');
+    const rotated = await onRotateAdmin(nextAdmin.id, rotationNote.trim() || 'Scheduled democratic leadership baton transfer');
+    if (!rotated) return;
     onClose();
   };
 
