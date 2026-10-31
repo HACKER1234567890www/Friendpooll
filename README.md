@@ -1,6 +1,6 @@
-# Friendpool (Build 1.1) — Democratic Social Micro-Investment Club PWA
+# Friendpool — Private Club Governance Simulation PWA
 
-Friendpool is a mobile-first Progressive Web App (PWA) designed for collaborative financial circles of 3 to 5 people. It enables close-knit peer groups to pool simulated micro-contributions, propose diversified investment allocations, vote with strict 1-member-1-vote democratic consensus, and rotate leadership administrative stewardship periodically.
+Friendpool is a mobile-first Progressive Web App (PWA) for private groups of 3 to 5 people to practise club governance. Members can record simulated contributions, create mock proposals, vote with a 1-member-1-vote model, review activity logs, and rotate administrator responsibilities.
 
 > **Disclaimer:** Friendpool is a non-custodial demonstration and financial simulation sandbox. All deposits, portfolio allocations, and voting tallies are simulated. Initial club pool balance starts at ₹0. No real fiat bank transactions, real stock broker purchases, or actual withdrawals are processed. Unsupported guaranteed or target return claims are prohibited.
 
