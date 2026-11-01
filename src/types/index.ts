@@ -107,3 +107,26 @@ export interface AuditLogItem {
   details?: string;
   hash: string;
 }
+
+export type WithdrawalStatus = 'pending' | 'frozen' | 'approved' | 'rejected' | 'expired' | 'cancelled';
+export type WithdrawalChoice = 'allow' | 'uphold_freeze';
+export interface WithdrawalRequest {
+  id: string;
+  memberId: string;
+  memberName: string;
+  amount: number;
+  reason: string;
+  status: WithdrawalStatus;
+  freezeReason?: string | null;
+  freezeExpiresAt?: string | null;
+  memberResponse?: string | null;
+  createdAt: string;
+  resolvedAt?: string | null;
+}
+export interface WithdrawalVote {
+  requestId: string;
+  voterId: string;
+  choice: WithdrawalChoice;
+  comment?: string | null;
+  createdAt: string;
+}
