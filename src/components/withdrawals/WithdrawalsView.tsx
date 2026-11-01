@@ -34,6 +34,7 @@ interface WithdrawalsViewProps {
   isAdmin: boolean;
   requests: WithdrawalRequest[];
   votes: WithdrawalVote[];
+  availableBalance: number;
   onSubmit: (amount: number, reason: string) => Promise<boolean>;
   onFreeze: (requestId: string, reason: string) => Promise<boolean>;
   onVote: (requestId: string, choice: WithdrawalChoice, comment: string) => Promise<boolean>;
@@ -47,7 +48,7 @@ const dateLabel = (value?: string | null) => value
   : '—';
 
 export const WithdrawalsView: React.FC<WithdrawalsViewProps> = ({
-  members, currentMember, isAdmin, requests, votes,
+  members, currentMember, isAdmin, requests, votes, availableBalance,
   onSubmit, onFreeze, onVote, onRespond, onCancel, onExpire,
 }) => {
   const [amount, setAmount] = useState('250');
@@ -99,6 +100,8 @@ export const WithdrawalsView: React.FC<WithdrawalsViewProps> = ({
         </div>
       </div>
 
+      <div className="rounded-xl border border-white/10 bg-[#07241a] p-4 flex items-center justify-between"><span className="text-sm text-slate-300">Available club balance</span><strong className="text-lg text-[#00f090]">{formatINR(availableBalance)}</strong></div>
+
       <form onSubmit={submit} className="rounded-2xl border border-white/10 bg-[#07241a] p-4 space-y-3">
         <div className="flex items-center gap-2"><Wallet className="w-5 h-5 text-[#00f090]" /><h3 className="font-bold text-white">Request a simulated withdrawal</h3></div>
         <label className="block text-xs text-slate-300">Amount (₹)
@@ -145,6 +148,15 @@ export const WithdrawalsView: React.FC<WithdrawalsViewProps> = ({
             </div>
             <p className="text-sm text-slate-300">{request.reason}</p>
 
+            {['pending','frozen'].includes(request.status) && !target && (
+              <div className="rounded-xl border border-[#00f090]/20 bg-[#041a12] p-3 space-y-2">
+                <p className="text-xs text-slate-300">{request.status === 'frozen' ? 'Emergency freeze vote' : 'Club vote'} — all members except the requester may vote. A simple majority decides.</p>
+                <div className="grid grid-cols-2 gap-2 text-xs text-slate-300"><span>Approve: {allowCount}</span><span>Reject: {upholdCount}</span><span>Majority needed: {threshold}</span><span>Eligible voters: {eligibleCount}</span></div>
+                {!myVote && <div className="grid grid-cols-2 gap-2"><button disabled={busyId === request.id} onClick={() => act(request.id, () => onVote(request.id, 'allow', ''), 'Your approval vote was recorded.')} className="rounded-lg bg-[#00f090] p-2 text-xs font-bold text-[#041a12]">Approve withdrawal</button><button disabled={busyId === request.id} onClick={() => act(request.id, () => onVote(request.id, 'uphold_freeze', ''), 'Your rejection vote was recorded.')} className="rounded-lg bg-rose-400 p-2 text-xs font-bold text-[#041a12]">Reject withdrawal</button></div>}
+                {myVote && <p className="text-xs text-[#00f090]">Your vote: {myVote.choice === 'allow' ? 'Approve' : 'Reject'}</p>}
+              </div>
+            )}
+
             {request.status === 'frozen' && (
               <div className="rounded-xl border border-amber-400/30 bg-amber-950/25 p-3 space-y-2">
                 <div className="flex items-center gap-2 text-amber-200 text-sm font-semibold"><AlertTriangle className="w-4 h-4" /> Temporary freeze — this request only</div>
@@ -188,8 +200,8 @@ export const WithdrawalsView: React.FC<WithdrawalsViewProps> = ({
             {target && ['pending','frozen','expired'].includes(request.status) && (
               <button disabled={busyId === request.id} onClick={() => act(request.id, () => onCancel(request.id), 'Your withdrawal request was cancelled.')} className="flex items-center gap-1 rounded-lg border border-white/15 px-3 py-2 text-xs text-slate-300"><XCircle className="w-3.5 h-3.5" /> Cancel my request</button>
             )}
-            {request.status === 'approved' && <p className="flex items-center gap-2 text-xs text-[#00f090]"><CheckCircle2 className="w-4 h-4" /> Approved for simulated withdrawal review. No payment has been made.</p>}
-            {request.status === 'rejected' && <p className="text-xs text-rose-300">The other members upheld the freeze by simple majority. No simulated withdrawal was executed.</p>}
+            {request.status === 'approved' && <p className="flex items-center gap-2 text-xs text-[#00f090]"><CheckCircle2 className="w-4 h-4" /> {formatINR(request.amount)} deducted from club simulated balance and credited to {target ? 'your' : `${request.memberName}'s`} simulated balance.</p>}
+            {request.status === 'rejected' && <p className="text-xs text-rose-300">The club rejected this request by simple majority. No balance was deducted.</p>}
             {request.status === 'expired' && <p className="text-xs text-slate-300"><Clock3 className="inline w-3.5 h-3.5 mr-1" />The temporary freeze expired without a majority decision. The request is released for review.</p>}
           </article>
         );
