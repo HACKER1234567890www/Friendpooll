@@ -4,10 +4,11 @@ import {
   ReceiptText, 
   Vote, 
   Users, 
-  History 
+  History,
+  ShieldCheck 
 } from 'lucide-react';
 
-export type NavTab = 'dashboard' | 'contributions' | 'proposals' | 'members' | 'audit';
+export type NavTab = 'dashboard' | 'contributions' | 'proposals' | 'withdrawals' | 'members' | 'audit';
 
 interface BottomNavProps {
   activeTab: NavTab;
@@ -24,6 +25,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'contributions', label: 'Ledger', icon: ReceiptText },
     { id: 'proposals', label: 'Proposals', icon: Vote, badge: openProposalsCount },
+    { id: 'withdrawals', label: 'Withdrawals', icon: ShieldCheck },
     { id: 'members', label: 'Members', icon: Users },
     { id: 'audit', label: 'Audit', icon: History },
   ];
@@ -35,7 +37,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         aria-label="Mobile Navigation"
         className="fixed bottom-0 left-0 right-0 z-40 bg-[#062319]/95 backdrop-blur-xl border-t border-[#00f090]/20 pb-safe md:hidden"
       >
-        <div className="grid grid-cols-5 h-16 max-w-md mx-auto px-2">
+        <div className="grid grid-cols-6 h-16 max-w-md mx-auto px-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
