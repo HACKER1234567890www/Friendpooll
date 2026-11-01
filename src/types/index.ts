@@ -32,32 +32,6 @@ export interface Contribution {
   reviewNote?: string;
 }
 
-export interface WithdrawalVote {
-  voterId: string;
-  voterName: string;
-  choice: 'allow' | 'uphold_freeze';
-  comment?: string;
-  createdAt: string;
-}
-
-export type WithdrawalStatus = 'pending' | 'frozen' | 'approved' | 'rejected' | 'expired' | 'cancelled';
-
-export interface WithdrawalRequest {
-  id: string;
-  clubId: string;
-  memberId: string;
-  memberName: string;
-  amount: number;
-  reason: string;
-  status: WithdrawalStatus;
-  freezeReason?: string;
-  freezeExpiresAt?: string;
-  createdAt: string;
-  resolvedAt?: string;
-  memberResponse?: string;
-  votes: WithdrawalVote[];
-}
-
 export type VoteDecision = 'approve' | 'reject' | 'abstain';
 
 export interface Vote {
