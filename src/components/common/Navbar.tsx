@@ -47,7 +47,26 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeClubName = 'Friendpool',
   onOpenInviteModal,
 }) => {
-  const currentMember = members.find((m) => m.id === currentMemberId) || members[0];
+  // A signed-in user may not have joined or created a club yet. Keep the
+  // account menu available in that state so they can always sign out.
+  const currentMember = members.find((m) => m.id === currentMemberId) || members[0] || (
+    authUserEmail
+      ? ({
+          id: currentMemberId || authUserEmail,
+          name: authUserEmail.split('@')[0] || 'Member',
+          role: 'Member',
+          avatar: (authUserEmail.split('@')[0] || 'M').slice(0, 2).toUpperCase(),
+          email: authUserEmail,
+          phone: '',
+          joinedDate: new Date().toISOString().slice(0, 10),
+          totalContributed: 0,
+          contributionCount: 0,
+          status: 'active',
+          color: '#00f090',
+          isSimulated: false,
+        } as Member)
+      : undefined
+  );
   const isAdmin = currentMember?.role === 'Admin';
   const isRealAccount = Boolean(authUserEmail && !isDemoMode);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
