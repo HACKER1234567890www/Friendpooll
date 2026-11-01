@@ -10,7 +10,10 @@ import {
   Proposal, 
   AdminRotation, 
   AuditLogItem, 
-  VoteDecision 
+  VoteDecision,
+  WithdrawalRequest,
+  WithdrawalVote,
+  WithdrawalChoice
 } from './types';
 import { 
   INITIAL_MEMBERS, 
@@ -26,6 +29,7 @@ import { ContributionsView } from './components/contributions/ContributionsView'
 import { ProposalsView } from './components/proposals/ProposalsView';
 import { MembersView } from './components/members/MembersView';
 import { AuditView } from './components/audit/AuditView';
+import { WithdrawalsView } from './components/withdrawals/WithdrawalsView';
 import { ClubOnboardingView } from './components/club/ClubOnboardingView';
 import { ContributeModal } from './components/modals/ContributeModal';
 import { NewProposalModal } from './components/modals/NewProposalModal';
@@ -142,6 +146,10 @@ export default function App() {
     history: [],
   });
   const [realAuditLogs, setRealAuditLogs] = useState<AuditLogItem[]>([]);
+  const [realWithdrawalRequests, setRealWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
+  const [realWithdrawalVotes, setRealWithdrawalVotes] = useState<WithdrawalVote[]>([]);
+  const [demoWithdrawalRequests, setDemoWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
+  const [demoWithdrawalVotes, setDemoWithdrawalVotes] = useState<WithdrawalVote[]>([]);
 
   // Navigation tab
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
@@ -174,6 +182,8 @@ export default function App() {
   const proposals = isRealMode ? realProposals : demoProposals;
   const rotation = isRealMode ? realRotation : demoRotation;
   const auditLogs = isRealMode ? realAuditLogs : demoAuditLogs;
+  const withdrawalRequests = isRealMode ? realWithdrawalRequests : demoWithdrawalRequests;
+  const withdrawalVotes = isRealMode ? realWithdrawalVotes : demoWithdrawalVotes;
   const currentMemberId = isRealMode 
     ? (authSession?.user?.id || '') 
     : demoCurrentMemberId;
@@ -280,6 +290,24 @@ export default function App() {
         voteRows = votes || [];
       }
 
+      const { data: withdrawalRows, error: withdrawalErr } = await client
+        .from('withdrawal_requests')
+        .select('*')
+        .eq('club_id', clubId)
+        .order('created_at', { ascending: false });
+      if (withdrawalErr) throw new Error(`Could not load withdrawal requests: ${withdrawalErr.message}`);
+
+      const withdrawalIds = (withdrawalRows || []).map((w: any) => w.id);
+      let withdrawalVoteRows: any[] = [];
+      if (withdrawalIds.length > 0) {
+        const { data: rows, error: rowsErr } = await client
+          .from('withdrawal_votes')
+          .select('*')
+          .in('request_id', withdrawalIds);
+        if (rowsErr) throw new Error(`Could not load withdrawal votes: ${rowsErr.message}`);
+        withdrawalVoteRows = rows || [];
+      }
+
       const { data: auditRows, error: auditErr } = await client
         .from('audit_logs')
         .select('*')
@@ -338,6 +366,16 @@ export default function App() {
       setRealContributions(loadedContribs);
       setRealProposals(loadedProposals);
       setRealAuditLogs(loadedAudits);
+      setRealWithdrawalRequests((withdrawalRows || []).map((w: any) => ({
+        id: w.id, memberId: w.member_id, memberName: memberNameMap[w.member_id] || 'Member',
+        amount: Number(w.amount), reason: w.reason, status: w.status,
+        freezeReason: w.freeze_reason, freezeExpiresAt: w.freeze_expires_at,
+        memberResponse: w.member_response, createdAt: w.created_at, resolvedAt: w.resolved_at,
+      })));
+      setRealWithdrawalVotes(withdrawalVoteRows.map((v: any) => ({
+        requestId: v.request_id, voterId: v.voter_id, choice: v.choice,
+        comment: v.comment, createdAt: v.created_at,
+      })));
     } catch (err: any) {
       if (loadSequence === cloudLoadSequenceRef.current) {
         console.warn('Error loading Supabase cloud club data:', err);
@@ -618,6 +656,16 @@ export default function App() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'audit_logs', filter: `club_id=eq.${activeClubId}` },
+        () => loadCloudClubData(activeClubId)
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'withdrawal_requests', filter: `club_id=eq.${activeClubId}` },
+        () => loadCloudClubData(activeClubId)
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'withdrawal_votes' },
         () => loadCloudClubData(activeClubId)
       )
       .subscribe();
@@ -1163,6 +1211,105 @@ export default function App() {
     setDemoAuditLogs((prev) => [auditItem, ...prev]);
   };
 
+  // Simulated withdrawal governance: each freeze is scoped to one request only.
+  const handleSubmitWithdrawal = async (amount: number, reason: string): Promise<boolean> => {
+    const client = supabase;
+    if (isRealMode && client && activeClubId) {
+      const { error } = await client.rpc('submit_simulated_withdrawal', { p_club_id: activeClubId, p_amount: amount, p_reason: reason });
+      if (error) { setAuthNotice({ type: 'error', message: `Withdrawal request failed: ${error.message}` }); return false; }
+      await loadCloudClubData(activeClubId);
+      return true;
+    }
+    const request: WithdrawalRequest = {
+      id: `wd_${Date.now()}`, memberId: currentMember.id, memberName: currentMember.name,
+      amount, reason, status: 'pending', createdAt: new Date().toISOString(),
+    };
+    setDemoWithdrawalRequests(prev => [request, ...prev]);
+    return true;
+  };
+
+  const handleFreezeWithdrawal = async (requestId: string, reason: string): Promise<boolean> => {
+    const client = supabase;
+    if (!isAdmin) { setAuthNotice({ type: 'error', message: 'Only the active club administrator can initiate an emergency freeze.' }); return false; }
+    if (isRealMode && client && activeClubId) {
+      const { error } = await client.rpc('freeze_simulated_withdrawal', { p_request_id: requestId, p_reason: reason });
+      if (error) { setAuthNotice({ type: 'error', message: `Freeze failed: ${error.message}` }); return false; }
+      await loadCloudClubData(activeClubId);
+      return true;
+    }
+    const target = demoWithdrawalRequests.find(r => r.id === requestId);
+    if (!target || target.status !== 'pending' || target.memberId === currentMember.id) return false;
+    const expires = new Date(Date.now() + 42 * 60 * 60 * 1000).toISOString();
+    setDemoWithdrawalRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'frozen', freezeReason: reason, freezeExpiresAt: expires } : r));
+    return true;
+  };
+
+  const handleVoteWithdrawal = async (requestId: string, choice: WithdrawalChoice, comment: string): Promise<boolean> => {
+    const client = supabase;
+    const target = withdrawalRequests.find(r => r.id === requestId);
+    if (!target || target.memberId === currentMember.id) return false;
+    if (isRealMode && client && activeClubId) {
+      const { error } = await client.rpc('cast_withdrawal_vote', { p_request_id: requestId, p_choice: choice, p_comment: comment || null });
+      if (error) { setAuthNotice({ type: 'error', message: `Vote failed: ${error.message}` }); return false; }
+      await loadCloudClubData(activeClubId);
+      return true;
+    }
+    if (target.status !== 'frozen' || withdrawalVotes.some(v => v.requestId === requestId && v.voterId === currentMember.id)) return false;
+    if (target.freezeExpiresAt && Date.now() >= new Date(target.freezeExpiresAt).getTime()) return handleExpireWithdrawal(requestId);
+    const vote: WithdrawalVote = { requestId, voterId: currentMember.id, choice, comment, createdAt: new Date().toISOString() };
+    const nextVotes = [...demoWithdrawalVotes, vote];
+    setDemoWithdrawalVotes(nextVotes);
+    const eligible = Math.max(0, members.length - 1);
+    const threshold = Math.floor(eligible / 2) + 1;
+    const allow = nextVotes.filter(v => v.requestId === requestId && v.choice === 'allow').length;
+    const uphold = nextVotes.filter(v => v.requestId === requestId && v.choice === 'uphold_freeze').length;
+    const status = allow >= threshold ? 'approved' : uphold >= threshold ? 'rejected' : 'frozen';
+    setDemoWithdrawalRequests(prev => prev.map(r => r.id === requestId ? { ...r, status, resolvedAt: status === 'frozen' ? r.resolvedAt : new Date().toISOString(), freezeReason: status === 'frozen' ? r.freezeReason : null, freezeExpiresAt: status === 'frozen' ? r.freezeExpiresAt : null } : r));
+    return true;
+  };
+
+  const handleRespondWithdrawal = async (requestId: string, response: string): Promise<boolean> => {
+    const client = supabase;
+    if (isRealMode && client && activeClubId) {
+      const { error } = await client.rpc('respond_to_simulated_withdrawal_freeze', { p_request_id: requestId, p_response: response });
+      if (error) { setAuthNotice({ type: 'error', message: `Response failed: ${error.message}` }); return false; }
+      await loadCloudClubData(activeClubId);
+      return true;
+    }
+    const target = demoWithdrawalRequests.find(r => r.id === requestId);
+    if (!target || target.memberId !== currentMember.id || target.status !== 'frozen') return false;
+    setDemoWithdrawalRequests(prev => prev.map(r => r.id === requestId ? { ...r, memberResponse: response } : r));
+    return true;
+  };
+
+  const handleCancelWithdrawal = async (requestId: string): Promise<boolean> => {
+    const client = supabase;
+    if (isRealMode && client && activeClubId) {
+      const { error } = await client.rpc('cancel_simulated_withdrawal', { p_request_id: requestId });
+      if (error) { setAuthNotice({ type: 'error', message: `Cancellation failed: ${error.message}` }); return false; }
+      await loadCloudClubData(activeClubId);
+      return true;
+    }
+    const target = demoWithdrawalRequests.find(r => r.id === requestId);
+    if (!target || target.memberId !== currentMember.id || !['pending','frozen','expired'].includes(target.status)) return false;
+    setDemoWithdrawalRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'cancelled', resolvedAt: new Date().toISOString(), freezeReason: null, freezeExpiresAt: null } : r));
+    return true;
+  };
+
+  const handleExpireWithdrawal = async (requestId: string): Promise<boolean> => {
+    const client = supabase;
+    if (isRealMode && client && activeClubId) {
+      const { error } = await client.rpc('expire_simulated_withdrawal_freeze', { p_request_id: requestId });
+      if (error) { setAuthNotice({ type: 'error', message: `Expiry update failed: ${error.message}` }); return false; }
+      await loadCloudClubData(activeClubId);
+      return true;
+    }
+    const target = demoWithdrawalRequests.find(r => r.id === requestId);
+    if (!target || target.status !== 'frozen' || !target.freezeExpiresAt || Date.now() < new Date(target.freezeExpiresAt).getTime()) return false;
+    setDemoWithdrawalRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'expired', resolvedAt: new Date().toISOString(), freezeReason: null, freezeExpiresAt: null } : r));
+    return true;
+  };
+
   // Administrator Rotation & Permission Handover
   const handleRotateAdmin = async (nextAdminId: string, note?: string): Promise<boolean> => {
     const client = supabase;
@@ -1582,6 +1729,22 @@ export default function App() {
                 onToggleMemberStatus={handleToggleMemberStatus}
                 isRealMode={isRealMode}
                 onOpenInviteModal={() => setIsInviteModalOpen(true)}
+              />
+            )}
+
+            {activeTab === 'withdrawals' && (
+              <WithdrawalsView
+                members={members}
+                currentMember={currentMember}
+                isAdmin={isAdmin}
+                requests={withdrawalRequests}
+                votes={withdrawalVotes}
+                onSubmit={handleSubmitWithdrawal}
+                onFreeze={handleFreezeWithdrawal}
+                onVote={handleVoteWithdrawal}
+                onRespond={handleRespondWithdrawal}
+                onCancel={handleCancelWithdrawal}
+                onExpire={handleExpireWithdrawal}
               />
             )}
 
