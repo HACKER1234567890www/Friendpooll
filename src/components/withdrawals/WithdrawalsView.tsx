@@ -105,7 +105,7 @@ export const WithdrawalsView: React.FC<WithdrawalsViewProps> = ({
       <form onSubmit={submit} className="rounded-2xl border border-white/10 bg-[#07241a] p-4 space-y-3">
         <div className="flex items-center gap-2"><Wallet className="w-5 h-5 text-[#00f090]" /><h3 className="font-bold text-white">Request a simulated withdrawal</h3></div>
         <label className="block text-xs text-slate-300">Amount (₹)
-          <input type="number" min="1" step="1" value={amount} onChange={e => setAmount(e.target.value)} className="mt-1 w-full rounded-xl bg-[#041a12] border border-white/15 p-3 text-white" />
+          <input type="number" min="0.01" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className="mt-1 w-full rounded-xl bg-[#041a12] border border-white/15 p-3 text-white" />
         </label>
         <label className="block text-xs text-slate-300">Reason
           <textarea minLength={5} maxLength={500} required value={reason} onChange={e => setReason(e.target.value)} placeholder="Explain why you are requesting this simulated withdrawal" className="mt-1 w-full min-h-20 rounded-xl bg-[#041a12] border border-white/15 p-3 text-white placeholder:text-slate-500" />
@@ -131,7 +131,7 @@ export const WithdrawalsView: React.FC<WithdrawalsViewProps> = ({
         const threshold = Math.floor(eligibleCount / 2) + 1;
         const allowCount = requestVotes.filter(v => v.choice === 'allow').length;
         const upholdCount = requestVotes.filter(v => v.choice === 'uphold_freeze').length;
-        const canVote = request.status === 'frozen' && !target && !myVote && !expired;
+        const canVote = false;
         const statusColor = request.status === 'frozen' ? 'text-amber-300' : request.status === 'approved' ? 'text-[#00f090]' : request.status === 'rejected' ? 'text-rose-300' : 'text-slate-300';
         return (
           <article key={request.id} className="rounded-2xl border border-white/10 bg-[#07241a] p-4 space-y-3">
