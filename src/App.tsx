@@ -290,23 +290,21 @@ export default function App() {
         voteRows = votes || [];
       }
 
-      const { data: withdrawalRows, error: withdrawalErr } = await client
-        .from('withdrawal_requests')
-        .select('*')
-        .eq('club_id', clubId)
-        .order('created_at', { ascending: false });
+      // Withdrawal tables intentionally deny direct client reads; use the member-scoped RPC.
+      const { data: withdrawalData, error: withdrawalErr } = await client.rpc('list_simulated_withdrawals', {
+        p_club_id: clubId,
+      });
       if (withdrawalErr) throw new Error(`Could not load withdrawal requests: ${withdrawalErr.message}`);
-
-      const withdrawalIds = (withdrawalRows || []).map((w: any) => w.id);
-      let withdrawalVoteRows: any[] = [];
-      if (withdrawalIds.length > 0) {
-        const { data: rows, error: rowsErr } = await client
-          .from('withdrawal_votes')
-          .select('*')
-          .in('request_id', withdrawalIds);
-        if (rowsErr) throw new Error(`Could not load withdrawal votes: ${rowsErr.message}`);
-        withdrawalVoteRows = rows || [];
-      }
+      const withdrawalRows: any[] = Array.isArray(withdrawalData) ? withdrawalData : [];
+      const withdrawalVoteRows: any[] = withdrawalRows.flatMap((w: any) =>
+        (Array.isArray(w.votes) ? w.votes : []).map((v: any) => ({
+          request_id: w.id,
+          voter_id: v.voter_id,
+          choice: v.choice,
+          comment: v.comment,
+          created_at: v.created_at,
+        }))
+      );
 
       const { data: auditRows, error: auditErr } = await client
         .from('audit_logs')
