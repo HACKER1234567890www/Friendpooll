@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, Clock3, ShieldCheck, Vote, Wallet, XCircle, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, Clock3, ShieldCheck, Wallet, XCircle, CheckCircle2 } from 'lucide-react';
 import { Member } from '../../types';
 import { formatINR } from '../../utils/formatters';
 
