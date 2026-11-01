@@ -68,7 +68,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       : undefined
   );
   const isAdmin = currentMember?.role === 'Admin';
-  const isRealAccount = Boolean(authUserEmail && !isDemoMode);
+  // Supabase can have a verified session even if the email field is unavailable.
+  // Use the connection state as a fallback so the account/sign-out menu never disappears.
+  const isRealAccount = Boolean((authUserEmail || isCloudConnected) && !isDemoMode);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
 
   return (
