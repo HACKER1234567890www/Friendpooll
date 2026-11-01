@@ -71,6 +71,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Supabase can have a verified session even if the email field is unavailable.
   // Use the connection state as a fallback so the account/sign-out menu never disappears.
   const isRealAccount = Boolean((authUserEmail || isCloudConnected) && !isDemoMode);
+  // Keep account access visible even while an authenticated user previews Demo Mode.
+  const hasAuthenticatedAccount = Boolean(authUserEmail || isCloudConnected);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
 
   return (
@@ -105,7 +107,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Right tools */}
         <div className="flex items-center gap-2">
           {/* Persona Switcher ONLY in Demo Mode */}
-          {isDemoMode ? (
+          {isDemoMode && !hasAuthenticatedAccount ? (
             <div className="relative flex items-center">
               <div className="hidden lg:flex items-center gap-1 mr-1.5 text-xs text-slate-400">
                 <UserCheck className="w-3.5 h-3.5 text-amber-400" />
@@ -135,7 +137,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </select>
               </div>
             </div>
-          ) : isRealAccount ? (
+          ) : hasAuthenticatedAccount ? (
             /* Authenticated Real User Identity Badge (No fake impersonation) */
             <div className="relative">
               <button
