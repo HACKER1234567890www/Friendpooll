@@ -294,14 +294,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isVerifying ? 'animate-spin' : ''}`} />
               </button>
-              <button
-                type="button"
-                onClick={() => setShowConfig(!showConfig)}
-                className="text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/5"
-                title="Connection Settings"
-              >
-                <Settings className="w-3.5 h-3.5" />
-              </button>
+              {import.meta.env.DEV && (
+                <button
+                  type="button"
+                  onClick={() => setShowConfig(!showConfig)}
+                  className="text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/5"
+                  title="Developer connection settings"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -313,13 +315,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <Loader2 className="w-4 h-4 animate-spin shrink-0" />
               <span>Verifying Supabase Cloud connection...</span>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowConfig(!showConfig)}
-              className="text-cyan-300/60 hover:text-cyan-200 p-1"
-            >
-              <Settings className="w-3.5 h-3.5" />
-            </button>
+            {import.meta.env.DEV && (
+              <button
+                type="button"
+                onClick={() => setShowConfig(!showConfig)}
+                className="text-cyan-300/60 hover:text-cyan-200 p-1"
+                title="Developer connection settings"
+              >
+                <Settings className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         )}
 
@@ -386,7 +391,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         )}
 
         {/* Configuration Drawer */}
-        {showConfig && (
+        {import.meta.env.DEV && showConfig && (
           <div className="mb-4 p-3 bg-white/5 border border-white/10 rounded-xl text-xs space-y-2.5">
             <div className="flex items-center justify-between text-white font-medium mb-1">
               <span className="flex items-center gap-1.5">
@@ -625,7 +630,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <span>Initialize New Club (Become Admin)</span>
               </div>
               <p className="text-xs text-white/60">
-                Create a private investment pool and receive the initial 30-day administrator baton.
+                Create a private club simulation and receive the initial 30-day administrator role.
               </p>
               <form onSubmit={handleCreateClub} className="flex gap-2">
                 <input
