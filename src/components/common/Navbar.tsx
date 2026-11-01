@@ -133,27 +133,27 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </select>
               </div>
             </div>
-          ) : isRealAccount && currentMember ? (
+          ) : isRealAccount ? (
             /* Authenticated Real User Identity Badge (No fake impersonation) */
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setShowAccountMenu((prev) => !prev)}
                 className="flex items-center bg-[#041a12] border border-[#00f090]/30 rounded-xl px-2.5 py-1 gap-2 hover:border-[#00f090]/60 transition cursor-pointer"
-                title={`Signed in as ${currentMember.name} (${authUserEmail})`}
+                title={`Signed in as ${currentMember?.name || authUserEmail} (${authUserEmail})`}
               >
                 <div
                   className="w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-bold text-white shrink-0 relative shadow"
-                  style={{ backgroundColor: currentMember.color || '#00f090' }}
+                  style={{ backgroundColor: currentMember?.color || '#00f090' }}
                 >
-                  {currentMember.avatar}
+                  {currentMember?.avatar || (authUserEmail?.slice(0, 2).toUpperCase() || 'ME')}
                   {isAdmin && (
                     <Crown className="w-3 h-3 text-amber-400 absolute -top-1.5 -right-1.5 fill-amber-400" />
                   )}
                 </div>
                 <div className="text-left hidden sm:block">
                   <div className="text-xs font-bold text-white leading-tight flex items-center gap-1">
-                    <span>{currentMember.name}</span>
+                    <span>{currentMember?.name || authUserEmail?.split('@')[0] || 'My Account'}</span>
                     {isAdmin && <span className="text-[10px] text-amber-300 font-normal">👑</span>}
                   </div>
                   <span className="text-[10px] text-slate-400 block leading-none">
@@ -172,10 +172,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   />
                   <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#07241a] border border-[#00f090]/30 shadow-2xl p-3 z-50 space-y-2 animate-in fade-in zoom-in-95 duration-150">
                     <div className="p-2.5 rounded-xl bg-[#041a12] border border-white/10 space-y-1">
-                      <span className="text-xs font-bold text-white block truncate">{currentMember.name}</span>
+                      <span className="text-xs font-bold text-white block truncate">{currentMember?.name || authUserEmail?.split('@')[0] || 'My Account'}</span>
                       <span className="text-[11px] text-slate-400 font-mono block truncate">{authUserEmail}</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#00f090]/20 text-[#00f090] font-bold inline-block mt-1">
-                        {isAdmin ? '👑 Active Administrator' : 'Club Member'}
+                        {isAdmin ? '👑 Active Administrator' : activeClubName && activeClubName !== 'Friendpool' ? 'Club Member' : 'Account'}
                       </span>
                     </div>
 
