@@ -674,9 +674,9 @@ export default function App() {
   }, [activeClubId, isRealMode, loadCloudClubData]);
 
   // Club balance is calculated strictly from APPROVED contributions
-  const approvedTotalBalance = contributions
-    .filter((c) => c.status === 'approved')
-    .reduce((sum, c) => sum + c.amount, 0);
+  const approvedTotalBalance = contributions.filter((c) => c.status === 'approved').reduce((sum, c) => sum + c.amount, 0)
+    - proposals.filter((p) => p.status === 'executed').reduce((sum, p) => sum + p.requestedAmount, 0)
+    - withdrawalRequests.filter((r) => r.status === 'approved').reduce((sum, r) => sum + r.amount, 0);
 
   // Create Club Handler (Called by Onboarding or Modal)
   const handleCreateClub = async (clubName: string): Promise<boolean> => {
@@ -1212,6 +1212,7 @@ export default function App() {
   // Simulated withdrawal governance: each freeze is scoped to one request only.
   const handleSubmitWithdrawal = async (amount: number, reason: string): Promise<boolean> => {
     const client = supabase;
+    if (amount > approvedTotalBalance) { setAuthNotice({ type: 'error', message: `The request exceeds the available club balance of ${formatINR(approvedTotalBalance)}.` }); return false; }
     if (isRealMode && client && activeClubId) {
       const { error } = await client.rpc('submit_simulated_withdrawal', { p_club_id: activeClubId, p_amount: amount, p_reason: reason });
       if (error) { setAuthNotice({ type: 'error', message: `Withdrawal request failed: ${error.message}` }); return false; }
@@ -1252,8 +1253,8 @@ export default function App() {
       await loadCloudClubData(activeClubId);
       return true;
     }
-    if (target.status !== 'frozen' || withdrawalVotes.some(v => v.requestId === requestId && v.voterId === currentMember.id)) return false;
-    if (target.freezeExpiresAt && Date.now() >= new Date(target.freezeExpiresAt).getTime()) return handleExpireWithdrawal(requestId);
+    if (!['pending','frozen'].includes(target.status) || withdrawalVotes.some(v => v.requestId === requestId && v.voterId === currentMember.id)) return false;
+    if (target.status === 'frozen' && target.freezeExpiresAt && Date.now() >= new Date(target.freezeExpiresAt).getTime()) return handleExpireWithdrawal(requestId);
     const vote: WithdrawalVote = { requestId, voterId: currentMember.id, choice, comment, createdAt: new Date().toISOString() };
     const nextVotes = [...demoWithdrawalVotes, vote];
     setDemoWithdrawalVotes(nextVotes);
@@ -1737,6 +1738,7 @@ export default function App() {
                 isAdmin={isAdmin}
                 requests={withdrawalRequests}
                 votes={withdrawalVotes}
+                availableBalance={Math.max(0, approvedTotalBalance)}
                 onSubmit={handleSubmitWithdrawal}
                 onFreeze={handleFreezeWithdrawal}
                 onVote={handleVoteWithdrawal}
